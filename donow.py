@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, url_for, redirect
+import hashlib
 
 app = Flask(__name__)
 
@@ -11,11 +12,32 @@ def hello():
 def authenticate():
 	print request.headers
 	print request.form #dictionary of args
-	if (request.form['user'].lower() == "username" and request.form['pass'] == "password"):  #value of age
-		return render_template("template2.html",match="are valid.")
-	else:
-		return render_template("template2.html",match="are invalid.")
+	
+	x = open("data/info.txt").readlines()
+	info = {}
+	
+	for line in x:
+		d = line.split(',')
+		info[d[0]] = d[1].strip("\n")
+	
+	if (request.form['auth'] == "login"):
+		password = hashlib.sha1(request.form['pass']).hexdigest()
+		print info[request.form['user']] + "\n"
+		print password + "\n"
 		
+		if (request.form['user'].lower() in info and info[request.form['user']] == password):
+				return render_template("template2.html",match="are valid.")
+		else:
+				return render_template("template2.html",match="are invalid." + info[request.form['user']] == password)
+
+	else:
+		if (request.form['user'].lower() not in info):
+			x = open("data/info.txt",'a')
+			x.write(request.form['user'].lower() + "," + hashlib.sha1(request.form['pass']).hexdigest() + "\n")
+			return render_template("template2.html", match="have been registered")
+		else:
+			return render_temlate("template2.html", match="have been taken")
+			
 if __name__ == "__main__":
 	app.debug = True
 	app.run()
