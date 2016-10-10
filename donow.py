@@ -1,48 +1,53 @@
 from flask import Flask, render_template, request, url_for, redirect, session
 import hashlib
+from utils import functions
+import os.path
 
 app = Flask(__name__)
 
+if os.path.isfile('data/secretkey.txt'):
+	app.secret_key = open('data/secretkey.txt').readline().strip('\n')
+
+
+	
 @app.route('/')
 def hello():
-	print request.headers
-	return render_template("template.html")
+	if 'username' in session:
+		return render_template("welcome.html",welcomed=session['username'])
+	return render_template("login.html")
 
 @app.route("/authenticate", methods = ['POST'])
 def authenticate():
 	print request.headers
 	print request.form #dictionary of args
-	
-	x = open("data/info.txt").readlines()
-	info = {}
-	
-	for line in x:
-		d = line.split(',')
-		info[d[0]] = d[1].strip("\n")
+		
+	info = functions.genDic()
 	
 	user = request.form['user'].lower()
 	password = hashlib.sha1(request.form['pass']).hexdigest()
 		
 	
 	if (request.form['auth'] == "login"):
-		
-		
 		if (user in info):
 			if (info[user] == password):
-				return render_template("template2.html",match="You have logged in!")
+				session['username'] = user
+				return render_template("welcome.html",welcomed=user)
 			else:
-				return render_template("template2.html",match="Your password is wrong.")
+				return render_template("error.html",match="Your password is wrong.")
 		else:
-			return render_template("template2.html",match="Your username is wrong.")
-			
+			return render_template("error.html",match="Your username is wrong.")
 	else:
 		if (user not in info):
-			x = open("data/info.txt",'a')
-			x.write(user + "," + password + "\n")
-			return render_template("template2.html", match="You have registered!")
+			functions.write(user,password)
+			return render_template("error.html", match="You have registered!")
 		else:
-			return render_template("template2.html", match="Your username has been taken.")
-			
+			return render_template("error.html", match="Your username has been taken.")
+		
+@app.route("/logout")
+def logout():
+	session.pop('username')
+	return redirect(url_for('hello'))
+		
 if __name__ == "__main__":
 	app.debug = True
 	app.run()
